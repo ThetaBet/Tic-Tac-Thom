@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js">
+    </script>
+</head>
+
+<body>
+    <script>
+        // variabile store giocatore, durata partita
+        var player
+        var gameCounter = 0
+        var arr = [];
+        var l = 0;
+        // configurazioni Phaser 
+        var config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            scene: {
+                preload: preload,
+                create: create
+            }
+        };
+        var game = new Phaser.Game(config);
+        // funzione per definire la matrice dei punteggi e assegnare un valore random al giocatore
+        function createArray() {
+            for (i = 0; i < 3; i++) {
+                arr[i] = [0, 0, 0]
+            }
+            randPlayer = Math.random()
+            if (randPlayer > .5) {
+                player = true
+            } else
+                player = false
+        }
+        //funzione scena preload() carica in memoria le info 
+        function preload() {
+            this.load.atlas('cube', 'assets/cube.png', 'assets/cube.json')
+            this.load.image('sky', 'assets/cielo.jpg')
+            
+            createArray()
+        }
+
+        // funzione create(): genera gli oggetti nel canvas
+        function create() {
+            this.add.image(400, 300, 'sky')
+            // Creazione animazioni
+            this.anims.create({
+                key: 'spin',
+                frames: this.anims.generateFrameNames('cube', { prefix: 'frame', start: 23, end: 1 }),
+                frameRate: 60,
+                repeat: -1,
+                yoyo: true
+            })
+            this.anims.create({
+                key: 'spin1',
+                frames: this.anims.generateFrameNames('cube', { prefix: 'frame', start: 23, end: 1 }),
+                frameRate: 60,
+                repeat: -1
+            })
+            this.anims.create({
+                key: 'spin2',
+                frames: this.anims.generateFrameNames('cube', { prefix: 'frame', start: 1, end: 23 }),
+                frameRate: 60,
+                repeat: -1
+            })
+            this.anims.create({
+                key: 'choice1',
+                frames: this.anims.generateFrameNames('cube', { prefix: 'frame', start: 12, end: 1 }),
+                frameRate: 60,
+                repeat: 0
+            })
+            this.anims.create({
+                key: 'choice2',
+                frames: this.anims.generateFrameNames('cube', { prefix: 'frame', start: 12, end: 23 }),
+                frameRate: 120,
+                repeat: 0
+            })
+            // Disegno i cubi copiando l'atlas e li allineo in una griglia
+            var cubes = this.add.group()
+            cubes.createMultiple({ key: 'cube', frame: 'frame12', repeat: 8 });
+            Phaser.Actions.GridAlign(cubes.getChildren(), {
+                width: 3,
+                height: 3,
+                cellWidth: 170,
+                cellHeight: 170,
+                x: 245,
+                y: 200
+            })
+            // Assegno ai cubi un nome
+            for (let cubo of cubes.getChildren()) {
+                console.log(i)
+                cubo.setName(l)
+                l++
+            }
+            // Definisco una label in posizione, ma vuota
+            var label = this.add.text(250, 60, '', { font: "48px Arial Black", fill: "#FFF" });
+            
+            // Definisco l'evento al click dei cubi
+            this.input.setHitArea(cubes.getChildren()).on('gameobjectdown', function (pointer, gameObject) {
+                // Condizione per capire di quale giocatore si tratta;
+                // Coloro i cubi, aumento il contatore di gioco globale (TODO: creare una funzione in cui inserire il contatore)
+                // Tolgo l'evento "onclick" sui cubi e lancio le funzioni per modificare il punteggio e controllare la vittoria
+                if (player) {
+                    gameObject.play('choice1')
+                    gameObject.tint = 0xff0000
+                    gameObject.input.enabled = false
+                    arrUpdate(gameObject.name, 1)
+                    isWinner()
+                    gameCounter++
+                    player = !player
+
+                } else {
+                    gameObject.anims.play('choice2')
+                    gameObject.tint = 0x0000ff
+                    gameObject.input.enabled = false
+                    arrUpdate(gameObject.name, -1)
+                    isWinner()
+                    gameCounter++
+                    player = !player
+                }
+
+            })
+            // Funzione di aggiornamento dell'array del punteggio. Passandogli il nome e il valore da assegnare in base al giocatore
+            // aggiorno un array bidimensionale in base alla posizione del cubo nell'array. (TODO: provare con array monodimensionale)
+            function arrUpdate(name, val) {
+                switch (name) {
+                    case 0:
+                        arr[0][0] = val
+                        break
+                    case 1:
+                        arr[0][1] = val
+                        break
+                    case 2:
+                        arr[0][2] = val
+                        break
+                    case 3:
+                        arr[1][0] = val
+                        break
+                    case 4:
+                        arr[1][1] = val
+                        break
+                    case 5:
+                        arr[1][2] = val
+                        break
+                    case 6:
+                        arr[2][0] = val
+                        break
+                    case 7:
+                        arr[2][1] = val
+                        break
+                    case 8:
+                        arr[2][2] = val
+                        break
+
+                }
+
+
+
+            }
+            // Funzione per controllare lo stato della partita. Lanciata ad ogni mossa. 
+            // Sommo i valori su linee colonne e diagonali (i giocatori 1 e 2 inseriscono valori di 1 e -1)
+            function isWinner() {
+                
+                let row1 = arr[0][0] + arr[0][1] + arr[0][2];
+                let row2 = arr[1][0] + arr[1][1] + arr[1][2];
+                let row3 = arr[2][0] + arr[2][1] + arr[2][2];
+                let col1 = arr[0][0] + arr[1][0] + arr[2][0];
+                let col2 = arr[0][1] + arr[1][1] + arr[2][1];
+                let col3 = arr[0][2] + arr[1][2] + arr[2][2];
+                let diag1 = arr[0][0] + arr[1][1] + arr[2][2];
+                let diag2 = arr[0][2] + arr[1][1] + arr[2][0];
+                // Controllo per ogni possibilità se è stato raggiunto il punteggio di vittoria. +3 per il giocatore 1 e -3 per il giocatore 2
+                if (row1 == 3) { winnerPrize(3, 'row1') }
+                if (row2 == 3) { winnerPrize(3, 'row2') }
+                if (row3 == 3) { winnerPrize(3, 'row3') }
+                if (col1 == 3) { winnerPrize(3, 'col1') }
+                if (col2 == 3) { winnerPrize(3, 'col2') }
+                if (col3 == 3) { winnerPrize(3, 'col3') }
+                if (diag1 == 3) { winnerPrize(3, 'diag1') }
+                if (diag2 == 3) { winnerPrize(3, 'diag2') }
+
+                if (row1 == -3) { winnerPrize(-3, 'row1') }
+                if (row2 == -3) { winnerPrize(-3, 'row2') }
+                if (row3 == -3) { winnerPrize(-3, 'row3') }
+                if (col1 == -3) { winnerPrize(-3, 'col1') }
+                if (col2 == -3) { winnerPrize(-3, 'col2') }
+                if (col3 == -3) { winnerPrize(-3, 'col3') }
+                if (diag1 == -3) { winnerPrize(-3, 'diag1') }
+                if (diag2 == -3) { winnerPrize(-3, 'diag2') }
+                // In caso contrario la condizione finale stampa a schermo pareggio e avvio un'animazione
+                if (gameCounter == 8) {
+                    let cubi = cubes.getChildren()
+                    for (let cubo of cubi) {
+                        cubo.play('spin')
+                    }
+                    label.setText('PAREGGIO')
+                    label.tint = 0xffffff
+                    for (let cubo of cubi) {
+                        setTimeout(() => cubo.tint = 0xffffff, 2000)
+                    }
+                }
+
+            }
+            // Se la condizione di vittoria è verificata, stampo a scherma con la label definita prima il vincitore
+            // E animo i blocchi che contrassegnano la vittoria
+            function winnerPrize(punt, pos) {
+                let cubi = cubes.getChildren()
+                let dir
+                if (punt === 3) {
+                    label.setText('ROSSO VINCE')
+                    label.tint = 0xff0000
+                    dir = 'spin1'
+                    for (let cubo of cubi) {
+                        cubo.input.enabled = false
+                    }
+                }
+                else {
+                    label.setText('BLU VINCE')
+                    label.tint = 0x0000ff
+                    dir = 'spin2'
+                    for (let cubo of cubi) {
+                        cubo.input.enabled = false
+                    }
+                }
+
+                switch (pos) {
+                    case "row1":
+                        cubi[0].play(dir)
+                        cubi[1].play(dir)
+                        cubi[2].play(dir)
+                        break
+                    case "row2":
+                        cubi[3].play(dir)
+                        cubi[4].play(dir)
+                        cubi[5].play(dir)
+                        break
+                    case "row3":
+                        cubi[6].play(dir)
+                        cubi[7].play(dir)
+                        cubi[8].play(dir)
+                        break
+                    case "col1":
+                        cubi[0].play(dir)
+                        cubi[3].play(dir)
+                        cubi[6].play(dir)
+                        break
+                    case "col2":
+                        cubi[1].play(dir)
+                        cubi[4].play(dir)
+                        cubi[7].play(dir)
+                        break
+                    case "col3":
+                        cubi[2].play(dir)
+                        cubi[5].play(dir)
+                        cubi[8].play(dir)
+                        break
+                    case "diag1":
+                        cubi[0].play(dir)
+                        cubi[4].play(dir)
+                        cubi[8].play(dir)
+                        break
+                    case "diag2":
+                        cubi[2].play(dir)
+                        cubi[4].play(dir)
+                        cubi[6].play(dir)
+                        break
+                }
+            }
+
+
+        }
+    </script>
+</body>
+
+</html>
